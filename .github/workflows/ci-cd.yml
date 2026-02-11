@@ -128,7 +128,7 @@ jobs:
           EOF
 
       - name: Build and start services
-        run: docker-compose up --build -d
+        run: docker compose up --build -d
 
       - name: Wait for services
         run: |
@@ -145,14 +145,14 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: docker-compose down -v
+        run: docker compose down -v
 
   # ===== 部署到生产服务器（仅 main 分支） =====
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
     needs: [docker-compose-test]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && github.event_name == 'push'
 
     steps:
       - name: Deploy via SSH
@@ -161,14 +161,16 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SERVER_PORT || 22 }}
+          port: ${{ secrets.SERVER_PORT }}
           script: |
             cd /opt/logistics-app
 
             # 拉取最新代码
-            git pull origin main
+            git fetch origin
+            git checkout ${{ github.ref_name }}
+            git pull origin ${{ github.ref_name }}
 
-            # 创建 .env 文件（从服务器环境变量）
+            # 创建 .env 文件
             cat > .env << 'ENVEOF'
             DB_HOST=db
             DB_PORT=3306
@@ -185,10 +187,10 @@ jobs:
             ENVEOF
 
             # 构建并重启服务
-            docker-compose down
-            docker-compose up --build -d
+            sudo docker compose down
+            sudo docker compose up --build -d
 
             # 清理旧镜像
-            docker image prune -f
+            sudo docker image prune -f
 
-            echo "✅ Deployment completed successfully!"
+            echo "Deployment completed!"
