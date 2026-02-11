@@ -28,7 +28,7 @@ import { AdminModule } from './modules/admin/admin.module';
         password: configService.get<string>('DB_PASSWORD', ''),
         database: configService.get<string>('DB_NAME', 'logistics_db'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get<string>('NODE_ENV') !== 'production',
+        synchronize: true,
         logging: configService.get<string>('NODE_ENV') === 'development',
         charset: 'utf8mb4',
       }),
